@@ -1,0 +1,123 @@
+name: auto build engine
+
+on: 
+  release:
+    types: [published]
+  schedule:
+    - cron: "0 16 * * *"
+  push:
+    branches: 
+      - master
+  watch:
+    types: [started]
+   
+jobs:
+  TENSORRT:
+    runs-on: windows-2022
+    
+    steps:
+    - name: Setup NuGet
+      uses: nuget/setup-nuget@main
+      
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@main
+      with:
+        msbuild-architecture: x64
+    
+    - name: Checkout
+      uses: actions/checkout@main
+    
+    - name: Build zlib
+      run: |
+        git clone https://github.com/kiyolee/zlib-win-build --depth 1
+        pushd zlib-win-build
+        msbuild build-VS2022/zlib.sln /t:rebuild /p:Configuration=Release /p:Platform="x64"
+        popd
+
+    - name: Build KataGo
+      run: |
+        git clone https://github.com/lightvector/KataGo --depth 1
+        Invoke-WebRequest -Uri https://raw.githubusercontent.com/ActiveIce/KataGo-build/master/fix.patch -OutFile fix.patch
+        pushd KataGo/cpp/
+        git apply ..\..\fix.patch --reject
+        cmake . -DUSE_AVX2:BOOL=ON -DNO_GIT_REVISION:BOOL=ON -DUSE_BACKEND:STRING=TENSORRT -DCUDAToolkit_BIN_DIR:PATH="..\..\CUDA\bin" -DTENSORRT_INCLUDE_DIR:PATH="..\..\CUDA\include" -DTENSORRT_LIBRARY:FILEPATH="..\..\CUDA\lib\nvinfer_10" -DUSE_CACHE_TENSORRT_PLAN:BOOL=ON -DZLIB_INCLUDE_DIR:PATH="..\..\zlib-win-build" -DZLIB_LIBRARY:FILEPATH="..\..\zlib-win-build\build-VS2022/x64/Release/libz-static"
+        msbuild katago.sln /t:rebuild /p:Configuration=Release /p:Platform="x64"
+        popd
+
+    - name: Upload KataGo
+      uses: actions/upload-artifact@main
+      with:
+        name: katago
+        path: KataGo\cpp\Release\katago.exe
+    
+  OPENCL:
+    runs-on: windows-2022
+    
+    steps:
+    - name: Setup NuGet
+      uses: nuget/setup-nuget@main
+      
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@main
+      with:
+        msbuild-architecture: x64
+    
+    - name: Checkout
+      uses: actions/checkout@main
+    
+    - name: Build zlib
+      run: |
+        git clone https://github.com/kiyolee/zlib-win-build --depth 1
+        pushd zlib-win-build
+        msbuild build-VS2022/zlib.sln /t:rebuild /p:Configuration=Release /p:Platform="x64"
+        popd
+
+    - name: Build KataGo
+      run: |
+        git clone https://github.com/lightvector/KataGo KataGo_opencl --depth 1
+        pushd KataGo_opencl\cpp\
+        cmake . -DUSE_AVX2:BOOL=ON -DNO_GIT_REVISION:BOOL=ON -DUSE_BACKEND:STRING=OPENCL -DOpenCL_INCLUDE_DIR:PATH="..\..\CUDA\include" -DOpenCL_LIBRARY:FILEPATH="..\..\CUDA\lib\x64\OpenCL" -DZLIB_INCLUDE_DIR:PATH="..\..\zlib-win-build" -DZLIB_LIBRARY:FILEPATH="..\..\zlib-win-build\build-VS2022/x64/Release/libz-static"
+        msbuild katago.sln /t:rebuild /p:Configuration=Release /p:Platform="x64"
+        mv Release\katago.exe Release\katago_opencl.exe
+        popd
+
+    - name: Upload KataGo
+      uses: actions/upload-artifact@main
+      with:
+        name: katago_opencl
+        path: KataGo_opencl\cpp\Release\katago_opencl.exe
+
+  push:
+    needs: [TENSORRT, OPENCL]
+    runs-on: windows-2022
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@main
+    
+    - name: Clean
+      run: |
+        rm katago*
+    
+    - name: Download KataGo TENSORRT
+      uses: actions/download-artifact@main
+      with:
+        name: katago
+        path: ./
+        
+    - name: Download KataGo OPENCL
+      uses: actions/download-artifact@main
+      with:
+        name: katago_opencl
+        path: ./
+    
+    - name: Commit
+      run: |
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Actions"
+        git checkout --orphan new_branch
+        git add -A
+        git commit -am "update new file"
+        git branch -D master
+        git branch -m master
+        git push origin master --force
