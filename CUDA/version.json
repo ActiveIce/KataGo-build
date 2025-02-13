@@ -1,0 +1,118 @@
+{
+   "cuda" : {
+      "name" : "CUDA SDK",
+      "version" : "12.8.0"
+   },
+   "cuda_cccl" : {
+      "name" : "CUDA C++ Core Compute Libraries",
+      "version" : "12.8.55"
+   },
+   "cuda_cudart" : {
+      "name" : "CUDA Runtime (cudart)",
+      "version" : "12.8.57"
+   },
+   "cuda_cuobjdump" : {
+      "name" : "cuobjdump",
+      "version" : "12.8.55"
+   },
+   "cuda_cupti" : {
+      "name" : "CUPTI",
+      "version" : "12.8.57"
+   },
+   "cuda_cuxxfilt" : {
+      "name" : "CUDA cu++ filt",
+      "version" : "12.8.55"
+   },
+   "cuda_demo_suite" : {
+      "name" : "CUDA Demo Suite",
+      "version" : "12.8.55"
+   },
+   "cuda_nvcc" : {
+      "name" : "CUDA NVCC",
+      "version" : "12.8.61"
+   },
+   "cuda_nvdisasm" : {
+      "name" : "CUDA nvdisasm",
+      "version" : "12.8.55"
+   },
+   "cuda_nvml_dev" : {
+      "name" : "CUDA NVML Headers",
+      "version" : "12.8.55"
+   },
+   "cuda_nvprof" : {
+      "name" : "CUDA nvprof",
+      "version" : "12.8.57"
+   },
+   "cuda_nvprune" : {
+      "name" : "CUDA nvprune",
+      "version" : "12.8.55"
+   },
+   "cuda_nvrtc" : {
+      "name" : "CUDA NVRTC",
+      "version" : "12.8.61"
+   },
+   "cuda_nvtx" : {
+      "name" : "CUDA NVTX",
+      "version" : "12.8.55"
+   },
+   "cuda_nvvp" : {
+      "name" : "CUDA NVVP",
+      "version" : "12.8.57"
+   },
+   "cuda_opencl" : {
+      "name" : "CUDA OpenCL",
+      "version" : "12.8.55"
+   },
+   "cuda_sanitizer_api" : {
+      "name" : "CUDA Compute Sanitizer API",
+      "version" : "12.8.55"
+   },
+   "libcublas" : {
+      "name" : "CUDA cuBLAS",
+      "version" : "12.8.3.14"
+   },
+   "libcufft" : {
+      "name" : "CUDA cuFFT",
+      "version" : "11.3.3.41"
+   },
+   "libcurand" : {
+      "name" : "CUDA cuRAND",
+      "version" : "10.3.9.55"
+   },
+   "libcusolver" : {
+      "name" : "CUDA cuSOLVER",
+      "version" : "11.7.2.55"
+   },
+   "libcusparse" : {
+      "name" : "CUDA cuSPARSE",
+      "version" : "12.5.7.53"
+   },
+   "libnpp" : {
+      "name" : "CUDA NPP",
+      "version" : "12.3.3.65"
+   },
+   "libnvfatbin" : {
+      "name" : "Fatbin interaction library",
+      "version" : "12.8.55"
+   },
+   "libnvjitlink" : {
+      "name" : "JIT Linker Library",
+      "version" : "12.8.61"
+   },
+   "libnvjpeg" : {
+      "name" : "CUDA nvJPEG",
+      "version" : "12.3.5.57"
+   },
+   "nsight_compute" : {
+      "name" : "Nsight Compute",
+      "version" : "2025.1.0.14"
+   },
+   "nsight_vse" : {
+      "name" : "Nsight Visual Studio Edition (VSE)",
+      "version" : "2025.1.0.25002"
+   },
+   "nvidia_driver" : {
+      "name" : "NVIDIA Windows Driver",
+      "version" : "571.96"
+   }
+}
