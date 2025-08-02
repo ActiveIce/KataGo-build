@@ -1,0 +1,504 @@
+From ffcabe50ac012da49da14ba80fd27981435203f7 Mon Sep 17 00:00:00 2001
+From: Yule Hou <hyln9@live.cn>
+Date: Sun, 9 Jun 2024 04:32:46 +0800
+Subject: [PATCH 1/4] Require TensorRT 10.0 or greater
+
+---
+ Compiling.md                 |  4 ++--
+ cpp/CMakeLists.txt           |  7 ++++---
+ cpp/neuralnet/trtbackend.cpp | 16 ----------------
+ 3 files changed, 6 insertions(+), 21 deletions(-)
+
+diff --git a/Compiling.md b/Compiling.md
+index 66920664..44fa17d6 100644
+--- a/Compiling.md
++++ b/Compiling.md
+@@ -32,7 +32,7 @@ As also mentioned in the instructions below but repeated here for visibility, if
+       * Some version of g++ that supports at least C++14.
+       * If using the OpenCL backend, a modern GPU that supports OpenCL 1.2 or greater, or else something like [this](https://software.intel.com/en-us/opencl-sdk) for CPU. But if using CPU, Eigen should be better.
+       * If using the CUDA backend, CUDA 11 or later and a compatible version of CUDNN based on your CUDA version (https://developer.nvidia.com/cuda-toolkit) (https://developer.nvidia.com/cudnn) and a GPU capable of supporting them.
+-      * If using the TensorRT backend, in addition to a compatible CUDA Toolkit (https://developer.nvidia.com/cuda-toolkit), you also need TensorRT (https://developer.nvidia.com/tensorrt) that is at least version 8.5.
++      * If using the TensorRT backend, in addition to a compatible CUDA Toolkit (https://developer.nvidia.com/cuda-toolkit), you also need TensorRT (https://developer.nvidia.com/tensorrt) that is at least version 10.0.
+       * If using the Eigen backend, Eigen3. With Debian packages, (i.e. apt or apt-get), this should be `libeigen3-dev`.
+       * zlib, libzip. With Debian packages (i.e. apt or apt-get), these should be `zlib1g-dev`, `libzip-dev`.
+       * If you want to do self-play training and research, probably Google perftools `libgoogle-perftools-dev` for TCMalloc or some other better malloc implementation. For unknown reasons, the allocation pattern in self-play with large numbers of threads and parallel games causes a lot of memory fragmentation under glibc malloc that will eventually run your machine out of memory, but better mallocs handle it fine.
+@@ -62,7 +62,7 @@ As also mentioned in the instructions below but repeated here for visibility, if
+       * Microsoft Visual Studio for C++. Version 15 (2017) has been tested and should work, other versions might work as well.
+       * If using the OpenCL backend, a modern GPU that supports OpenCL 1.2 or greater, or else something like [this](https://software.intel.com/en-us/opencl-sdk) for CPU. But if using CPU, Eigen should be better.
+       * If using the CUDA backend, CUDA 11 or later and a compatible version of CUDNN based on your CUDA version (https://developer.nvidia.com/cuda-toolkit) (https://developer.nvidia.com/cudnn) and a GPU capable of supporting them. I'm unsure how version compatibility works with CUDA, there's a good chance that later versions than these work just as well, but they have not been tested.
+-      * If using the TensorRT backend, in addition to a compatible CUDA Toolkit (https://developer.nvidia.com/cuda-toolkit), you also need TensorRT (https://developer.nvidia.com/tensorrt) that is at least version 8.5.
++      * If using the TensorRT backend, in addition to a compatible CUDA Toolkit (https://developer.nvidia.com/cuda-toolkit), you also need TensorRT (https://developer.nvidia.com/tensorrt) that is at least version 10.0.
+       * If using the Eigen backend, Eigen3, version 3.3.x. (http://eigen.tuxfamily.org/index.php?title=Main_Page#Download).
+       * zlib. The following package might work, https://www.nuget.org/packages/zlib-vc140-static-64/, or alternatively you can build it yourself via something like: https://github.com/kiyolee/zlib-win-build
+       * libzip (optional, needed only for self-play training) - for example https://github.com/kiyolee/libzip-win-build
+diff --git a/cpp/CMakeLists.txt b/cpp/CMakeLists.txt
+index a0fcb27d..6c2437b0 100644
+--- a/cpp/CMakeLists.txt
++++ b/cpp/CMakeLists.txt
+@@ -311,9 +311,10 @@ elseif(USE_BACKEND STREQUAL "TENSORRT")
+   # Version 8 is required for serializing the builder timing cache.
+   # Version 8.2 is required for eliminating the global logger for Builder and Runtime.
+   # Version 8.5 is required for eliminating many deprecated APIs and adopting new features.
+-  # Version 8.6 is for CUDA 12 support and further reduction in initialization time.
+-  if(TENSORRT_VERSION VERSION_LESS 8.5)
+-    message(FATAL_ERROR "TensorRT 8.5 or greater is required but ${TENSORRT_VERSION} was found.")
++  # Version 8.6 is required for CUDA 12 support and further reduction in initialization time.
++  # Version 10.0 is required for better CUDA 12 support and drastic reduction in plan cache size.
++  if(TENSORRT_VERSION VERSION_LESS 10.0)
++    message(FATAL_ERROR "TensorRT 10.0 or greater is required but ${TENSORRT_VERSION} was found.")
+   endif()
+   include_directories(SYSTEM ${CUDAToolkit_INCLUDE_DIRS} ${TENSORRT_INCLUDE_DIR}) #SYSTEM is for suppressing some compiler warnings in thrust libraries
+   target_link_libraries(katago CUDA::cudart_static ${TENSORRT_LIBRARY})
+diff --git a/cpp/neuralnet/trtbackend.cpp b/cpp/neuralnet/trtbackend.cpp
+index 1ff84863..a00391d1 100644
+--- a/cpp/neuralnet/trtbackend.cpp
++++ b/cpp/neuralnet/trtbackend.cpp
+@@ -893,12 +893,7 @@ struct ModelParser {
+   }
+ 
+   ILayer* applyCastLayer(ILayer* inputLayer, DataType dataType) {
+-#if NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR == 5
+-    auto castLayer = model->network->addIdentity(*inputLayer->getOutput(0));
+-    castLayer->setOutputType(0, dataType);
+-#else
+     auto castLayer = model->network->addCast(*inputLayer->getOutput(0), dataType);
+-#endif
+     auto castLayerName = string(inputLayer->getName()) + "/cast";
+     castLayer->setName(castLayerName.c_str());
+     return castLayer;
+@@ -998,22 +993,11 @@ struct ComputeHandle {
+     debugOutputs = model->debugOutputs;
+     config->addOptimizationProfile(profile);
+ 
+-#if NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR == 5
+-    // This is to avoid external tactic sources and tactics that have shape switching overhead
+-    if(prop->major < 8) {
+-      config->setTacticSources(
+-        1U << static_cast<uint32_t>(TacticSource::kJIT_CONVOLUTIONS) |
+-        1U << static_cast<uint32_t>(TacticSource::kEDGE_MASK_CONVOLUTIONS));
+-    } else {
+-      config->setTacticSources(1U << static_cast<uint32_t>(TacticSource::kJIT_CONVOLUTIONS));
+-    }
+-#else
+     if(prop->major >= 8) {
+       // This is to avoid tactics that have shape switching overhead
+       config->setTacticSources(1U << static_cast<uint32_t>(TacticSource::kJIT_CONVOLUTIONS));
+       config->setBuilderOptimizationLevel(2);
+     }
+-#endif
+ 
+     // So that there are no concurrent kernel executions probably from other parts of code while profiling
+     // See CUDA Runtime API document for more details related to NULL stream and synchronization behaviors
+-- 
+2.43.0
+
+
+From 79563bd9884e3cb829d080338b5d396ae3e03554 Mon Sep 17 00:00:00 2001
+From: Yule Hou <hyln9@live.cn>
+Date: Sun, 9 Jun 2024 04:32:46 +0800
+Subject: [PATCH 2/4] Minimize trt plan cache size
+
+---
+ cpp/neuralnet/trtbackend.cpp | 201 +++++++++++++++++++++++------------
+ 1 file changed, 131 insertions(+), 70 deletions(-)
+
+diff --git a/cpp/neuralnet/trtbackend.cpp b/cpp/neuralnet/trtbackend.cpp
+index a00391d1..9be4efa4 100644
+--- a/cpp/neuralnet/trtbackend.cpp
++++ b/cpp/neuralnet/trtbackend.cpp
+@@ -18,7 +18,7 @@ using namespace std;
+ using namespace nvinfer1;
+ 
+ // Define this to print out some of the intermediate values of the neural net
+-//#define DEBUG_INTERMEDIATE_VALUES
++// #define DEBUG_INTERMEDIATE_VALUES
+ 
+ static void checkCudaError(const cudaError_t status, const char* opName, const char* file, const char* func, int line) {
+   if(status != cudaSuccess)
+@@ -122,7 +122,8 @@ struct TRTModel {
+ 
+   // TensorRT keeps only reference to weights before engine is built
+   const LoadedModel* rawModel;
+-  vector<unique_ptr<float[]>> extraWeights;
++  vector<unique_ptr<float[]>> rawWeights;
++  unordered_map<string, Weights> namedWeights;
+ 
+   int modelVersion;
+   uint8_t tuneHash[32];
+@@ -299,64 +300,88 @@ struct ModelParser {
+       maskWidthLayer->setName("InputMask/width");
+       maskWidthLayer->setPrecision(DataType::kFLOAT);
+ 
+-      auto maskScaleWeightsShift = make_unique<float[]>(1);
+-      auto maskScaleWeightsScale = make_unique<float[]>(1);
+-      maskScaleWeightsShift[0] = -1.4f;
+-      maskScaleWeightsScale[0] = 0.1f;
++      auto maskScaleRawWeightsShift = make_unique<float[]>(1);
++      auto maskScaleRawWeightsScale = make_unique<float[]>(1);
++      Weights maskScaleNamedWeightsShift = {DataType::kFLOAT, maskScaleRawWeightsShift.get(), 1};
++      Weights maskScaleNamedWeightsScale = {DataType::kFLOAT, maskScaleRawWeightsScale.get(), 1};
++      maskScaleRawWeightsShift[0] = -1.4f;
++      maskScaleRawWeightsScale[0] = 0.1f;
+       maskScaleLayer = network->addScale(
+         *maskWidthLayer->getOutput(0),
+         ScaleMode::kUNIFORM,
+-        {DataType::kFLOAT, maskScaleWeightsShift.get(), 1},
+-        {DataType::kFLOAT, maskScaleWeightsScale.get(), 1},
++        maskScaleNamedWeightsShift,
++        maskScaleNamedWeightsScale,
+         {DataType::kFLOAT, nullptr, 0});
+       maskScaleLayer->setName("InputMask/scale");
+       maskScaleLayer->setPrecision(DataType::kFLOAT);
+-      model->extraWeights.push_back(move(maskScaleWeightsShift));
+-      model->extraWeights.push_back(move(maskScaleWeightsScale));
+-
+-      auto maskCenterSquareWeightsShift = make_unique<float[]>(1);
+-      auto maskCenterSquareWeightsPower = make_unique<float[]>(1);
+-      maskCenterSquareWeightsShift[0] = -14.0f;
+-      maskCenterSquareWeightsPower[0] = 2.0f;
++      network->setWeightsName(maskScaleNamedWeightsShift, "InputMask/scale/shift");
++      network->setWeightsName(maskScaleNamedWeightsScale, "InputMask/scale/scale");
++      model->rawWeights.push_back(move(maskScaleRawWeightsShift));
++      model->rawWeights.push_back(move(maskScaleRawWeightsScale));
++      model->namedWeights["InputMask/scale/shift"] = maskScaleNamedWeightsShift;
++      model->namedWeights["InputMask/scale/scale"] = maskScaleNamedWeightsScale;
++
++      auto maskCenterSquareRawWeightsShift = make_unique<float[]>(1);
++      auto maskCenterSquareRawWeightsPower = make_unique<float[]>(1);
++      Weights maskCenterSquareNamedWeightsShift = {DataType::kFLOAT, maskCenterSquareRawWeightsShift.get(), 1};
++      Weights maskCenterSquareNamedWeightsPower = {DataType::kFLOAT, maskCenterSquareRawWeightsPower.get(), 1};
++      maskCenterSquareRawWeightsShift[0] = -14.0f;
++      maskCenterSquareRawWeightsPower[0] = 2.0f;
+       auto maskCenterSquareLayer = network->addScale(
+         *maskWidthLayer->getOutput(0),
+         ScaleMode::kUNIFORM,
+-        {DataType::kFLOAT, maskCenterSquareWeightsShift.get(), 1},
++        maskCenterSquareNamedWeightsShift,
+         {DataType::kFLOAT, nullptr, 0},
+-        {DataType::kFLOAT, maskCenterSquareWeightsPower.get(), 1});
++        maskCenterSquareNamedWeightsPower);
+       maskCenterSquareLayer->setName("InputMask/centersquare");
+       maskCenterSquareLayer->setPrecision(DataType::kFLOAT);
+-      model->extraWeights.push_back(move(maskCenterSquareWeightsShift));
+-      model->extraWeights.push_back(move(maskCenterSquareWeightsPower));
+-
+-      auto maskQuadWeightsShift = make_unique<float[]>(1);
+-      auto maskQuadWeightsScale = make_unique<float[]>(1);
+-      maskQuadWeightsShift[0] = -0.1f;
+-      maskQuadWeightsScale[0] = 0.01f;
++      network->setWeightsName(maskCenterSquareNamedWeightsShift, "InputMask/centersquare/shift");
++      network->setWeightsName(maskCenterSquareNamedWeightsPower, "InputMask/centersquare/power");
++      model->rawWeights.push_back(move(maskCenterSquareRawWeightsShift));
++      model->rawWeights.push_back(move(maskCenterSquareRawWeightsPower));
++      model->namedWeights["InputMask/centersquare/shift"] = maskCenterSquareNamedWeightsShift;
++      model->namedWeights["InputMask/centersquare/power"] = maskCenterSquareNamedWeightsPower;
++
++      auto maskQuadRawWeightsShift = make_unique<float[]>(1);
++      auto maskQuadRawWeightsScale = make_unique<float[]>(1);
++      Weights maskQuadNamedWeightsShift = {DataType::kFLOAT, maskQuadRawWeightsShift.get(), 1};
++      Weights maskQuadNamedWeightsScale = {DataType::kFLOAT, maskQuadRawWeightsScale.get(), 1};
++      maskQuadRawWeightsShift[0] = -0.1f;
++      maskQuadRawWeightsScale[0] = 0.01f;
+       maskQuadLayer = network->addScale(
+         *maskCenterSquareLayer->getOutput(0),
+         ScaleMode::kUNIFORM,
+-        {DataType::kFLOAT, maskQuadWeightsShift.get(), 1},
+-        {DataType::kFLOAT, maskQuadWeightsScale.get(), 1},
++        maskQuadNamedWeightsShift,
++        maskQuadNamedWeightsScale,
+         {DataType::kFLOAT, nullptr, 0});
+       maskQuadLayer->setName("InputMask/quad");
+       maskQuadLayer->setPrecision(DataType::kFLOAT);
+-      model->extraWeights.push_back(move(maskQuadWeightsShift));
+-      model->extraWeights.push_back(move(maskQuadWeightsScale));
++      network->setWeightsName(maskQuadNamedWeightsShift, "InputMask/quad/shift");
++      network->setWeightsName(maskQuadNamedWeightsScale, "InputMask/quad/scale");
++      model->rawWeights.push_back(move(maskQuadRawWeightsShift));
++      model->rawWeights.push_back(move(maskQuadRawWeightsScale));
++      model->namedWeights["InputMask/quad/shift"] = maskQuadNamedWeightsShift;
++      model->namedWeights["InputMask/quad/scale"] = maskQuadNamedWeightsScale;
+     } else {
+       float maskWidth = sqrtf(nnXLen * nnYLen);
+ 
+-      auto maskScaleLayerWeights = make_unique<float[]>(1);
+-      maskScaleLayerWeights[0] = maskWidth * 0.1f - 1.4f;
+-      maskScaleLayer = network->addConstant({4, {1, 1, 1, 1}}, {DataType::kFLOAT, maskScaleLayerWeights.get(), 1});
++      auto maskScaleLayerRawWeights = make_unique<float[]>(1);
++      Weights maskScaleLayerNamedWeights = {DataType::kFLOAT, maskScaleLayerRawWeights.get(), 1};
++      maskScaleLayerRawWeights[0] = maskWidth * 0.1f - 1.4f;
++      maskScaleLayer = network->addConstant({4, {1, 1, 1, 1}}, maskScaleLayerNamedWeights);
+       maskScaleLayer->setName("InputMask/scale");
+-      model->extraWeights.push_back(move(maskScaleLayerWeights));
+-
+-      auto maskQuadLayerWeights = make_unique<float[]>(1);
+-      maskQuadLayerWeights[0] = (maskWidth - 14.0f) * (maskWidth - 14.0f) * 0.01f - 0.1f;
+-      maskQuadLayer = network->addConstant({4, {1, 1, 1, 1}}, {DataType::kFLOAT, maskQuadLayerWeights.get(), 1});
++      network->setWeightsName(maskScaleLayerNamedWeights, "InputMask/scale");
++      model->rawWeights.push_back(move(maskScaleLayerRawWeights));
++      model->namedWeights["InputMask/scale"] = maskScaleLayerNamedWeights;
++
++      auto maskQuadLayerRawWeights = make_unique<float[]>(1);
++      Weights maskQuadLayerNamedWeights = {DataType::kFLOAT, maskQuadLayerRawWeights.get(), 1};
++      maskQuadLayerRawWeights[0] = (maskWidth - 14.0f) * (maskWidth - 14.0f) * 0.01f - 0.1f;
++      maskQuadLayer = network->addConstant({4, {1, 1, 1, 1}}, maskQuadLayerNamedWeights);
+       maskQuadLayer->setName("InputMask/quad");
+-      model->extraWeights.push_back(move(maskQuadLayerWeights));
++      network->setWeightsName(maskQuadLayerNamedWeights, "InputMask/quad");
++      model->rawWeights.push_back(move(maskQuadLayerRawWeights));
++      model->namedWeights["InputMask/quad"] = maskQuadLayerNamedWeights;
+     }
+   }
+ 
+@@ -628,28 +653,29 @@ struct ModelParser {
+     assert(input->getDimensions().d[1] == numInChannels);
+ 
+     // Transpose from model's CK to TensorRT's KC
+-    auto transposedWeights = make_unique<float[]>(desc->weights.size());
++    auto layerRawWeights = make_unique<float[]>(desc->weights.size());
+     for(int ic = 0; ic < numInChannels; ic++) {
+       for(int oc = 0; oc < numOutChannels; oc++) {
+-        transposedWeights[oc * numInChannels + ic] = desc->weights[ic * numOutChannels + oc];
++        layerRawWeights[oc * numInChannels + ic] = desc->weights[ic * numOutChannels + oc];
+       }
+     }
+ 
++    Weights layerNamedWeights = {DataType::kFLOAT, layerRawWeights.get(), static_cast<int64_t>(desc->weights.size())};
++
+     // For convenience, both I/O tensors have 3 dimentions (in addition to batch), so that
+     // matmul is mathmatically equivalent to a 2D convolution of 1x1 features and 1x1 kernels.
+     auto matMulLayer = model->network->addConvolutionNd(
+-      *input,
+-      desc->outChannels,
+-      {2, {1, 1}},
+-      {DataType::kFLOAT, transposedWeights.get(), static_cast<int64_t>(desc->weights.size())},
+-      {DataType::kFLOAT, nullptr, 0});
++      *input, desc->outChannels, {2, {1, 1}}, layerNamedWeights, {DataType::kFLOAT, nullptr, 0});
+     matMulLayer->setName(desc->name.c_str());
+ 
+     if(forceFP32) {
+       matMulLayer->setPrecision(DataType::kFLOAT);
+     }
+ 
+-    model->extraWeights.push_back(move(transposedWeights));
++    model->network->setWeightsName(layerNamedWeights, desc->name.c_str());
++
++    model->rawWeights.push_back(move(layerRawWeights));
++    model->namedWeights[desc->name] = layerNamedWeights;
+ 
+     return matMulLayer;
+   }
+@@ -662,18 +688,20 @@ struct ModelParser {
+     assert(desc->weights.size() == numChannels);
+     assert(input->getDimensions().d[1] == numChannels);
+ 
++    Weights layerNamedWeights = {DataType::kFLOAT, desc->weights.data(), static_cast<int64_t>(numChannels)};
++
+     auto matBiasLayer = model->network->addScale(
+-      *input,
+-      ScaleMode::kCHANNEL,
+-      {DataType::kFLOAT, desc->weights.data(), static_cast<int64_t>(numChannels)},
+-      {DataType::kFLOAT, nullptr, 0},
+-      {DataType::kFLOAT, nullptr, 0});
++      *input, ScaleMode::kCHANNEL, layerNamedWeights, {DataType::kFLOAT, nullptr, 0}, {DataType::kFLOAT, nullptr, 0});
+     matBiasLayer->setName(desc->name.c_str());
+ 
+     if(forceFP32) {
+       matBiasLayer->setPrecision(DataType::kFLOAT);
+     }
+ 
++    model->network->setWeightsName(layerNamedWeights, desc->name.c_str());
++
++    model->namedWeights[desc->name] = layerNamedWeights;
++
+     return matBiasLayer;
+   }
+ 
+@@ -698,12 +726,10 @@ struct ModelParser {
+     assert(desc->weights.size() == convYSize * convXSize * numInChannels * numOutChannels);
+     assert(input->getDimensions().d[1] == numInChannels);
+ 
++    Weights layerNamedWeights = {DataType::kFLOAT, desc->weights.data(), static_cast<int64_t>(desc->weights.size())};
++
+     auto convLayer = model->network->addConvolutionNd(
+-      *input,
+-      desc->outChannels,
+-      {2, {convYSize, convXSize}},
+-      {DataType::kFLOAT, desc->weights.data(), static_cast<int64_t>(desc->weights.size())},
+-      {DataType::kFLOAT, nullptr, 0});
++      *input, desc->outChannels, {2, {convYSize, convXSize}}, layerNamedWeights, {DataType::kFLOAT, nullptr, 0});
+     convLayer->setDilationNd({2, {dilationY, dilationX}});
+     convLayer->setPaddingMode(PaddingMode::kSAME_UPPER);
+     convLayer->setName(desc->name.c_str());
+@@ -712,6 +738,10 @@ struct ModelParser {
+       convLayer->setPrecision(DataType::kFLOAT);
+     }
+ 
++    model->network->setWeightsName(layerNamedWeights, desc->name.c_str());
++
++    model->namedWeights[desc->name] = layerNamedWeights;
++
+     return convLayer;
+   }
+ 
+@@ -727,27 +757,34 @@ struct ModelParser {
+     assert(desc->bias.size() == numChannels);
+     assert(input->getDimensions().d[1] == numChannels);
+ 
+-    auto mergedScale = make_unique<float[]>(numChannels);
+-    auto mergedBias = make_unique<float[]>(numChannels);
++    auto layerRawWeightsBias = make_unique<float[]>(numChannels);
++    auto layerRawWeightsScale = make_unique<float[]>(numChannels);
++    Weights layerNamedWeightsBias = {DataType::kFLOAT, layerRawWeightsBias.get(), static_cast<int64_t>(numChannels)};
++    Weights layerNamedWeightsScale = {DataType::kFLOAT, layerRawWeightsScale.get(), static_cast<int64_t>(numChannels)};
++
+     for(int i = 0; i < numChannels; i++) {
+-      mergedScale[i] = desc->scale[i] / sqrtf(desc->variance[i] + epsilon);
+-      mergedBias[i] = desc->bias[i] - mergedScale[i] * desc->mean[i];
++      layerRawWeightsScale[i] = desc->scale[i] / sqrtf(desc->variance[i] + epsilon);
++      layerRawWeightsBias[i] = desc->bias[i] - layerRawWeightsScale[i] * desc->mean[i];
+     }
+ 
+     auto bnLayer = model->network->addScale(
+-      *input,
+-      ScaleMode::kCHANNEL,
+-      {DataType::kFLOAT, mergedBias.get(), static_cast<int64_t>(numChannels)},
+-      {DataType::kFLOAT, mergedScale.get(), static_cast<int64_t>(numChannels)},
+-      {DataType::kFLOAT, nullptr, 0});
++      *input, ScaleMode::kCHANNEL, layerNamedWeightsBias, layerNamedWeightsScale, {DataType::kFLOAT, nullptr, 0});
+     bnLayer->setName(desc->name.c_str());
+ 
++    auto layerWeightsBiasName = desc->name + "/bias";
++    auto layerWeightsScaleName = desc->name + "/scale";
++
+     if(forceFP32) {
+       bnLayer->setPrecision(DataType::kFLOAT);
+     }
+ 
+-    model->extraWeights.push_back(move(mergedScale));
+-    model->extraWeights.push_back(move(mergedBias));
++    model->network->setWeightsName(layerNamedWeightsBias, layerWeightsBiasName.c_str());
++    model->network->setWeightsName(layerNamedWeightsScale, layerWeightsScaleName.c_str());
++
++    model->rawWeights.push_back(move(layerRawWeightsBias));
++    model->rawWeights.push_back(move(layerRawWeightsScale));
++    model->namedWeights[layerWeightsBiasName] = layerNamedWeightsBias;
++    model->namedWeights[layerWeightsScaleName] = layerNamedWeightsScale;
+ 
+     return bnLayer;
+   }
+@@ -823,17 +860,20 @@ struct ModelParser {
+     } else if(!model->requireExactNNLen) {
+       // All activation functions we use right now are always greater than -1.0, and map 0 -> 0.
+       // So off-board areas will equal 0, and then this max is mask-safe if we assign -1.0 to off-board areas.
+-      auto gpoolMaskShiftWeights = make_unique<float[]>(1);
+-      gpoolMaskShiftWeights[0] = -1.0f;
++      auto gpoolMaskShiftRawWeights = make_unique<float[]>(1);
++      Weights gpoolMaskShiftNamedWeights = {DataType::kFLOAT, gpoolMaskShiftRawWeights.get(), 1};
++      gpoolMaskShiftRawWeights[0] = -1.0f;
+       gpoolMaskShiftLayer = network->addScale(
+         *inputMask,
+         ScaleMode::kUNIFORM,
+-        {DataType::kFLOAT, gpoolMaskShiftWeights.get(), 1},
++        gpoolMaskShiftNamedWeights,
+         {DataType::kFLOAT, nullptr, 0},
+         {DataType::kFLOAT, nullptr, 0});
+       auto gpoolMaskShiftLayerName = name + "/gpmaskshift";
+       gpoolMaskShiftLayer->setName(gpoolMaskShiftLayerName.c_str());
+-      model->extraWeights.push_back(move(gpoolMaskShiftWeights));
++      network->setWeightsName(gpoolMaskShiftNamedWeights, gpoolMaskShiftLayerName.c_str());
++      model->rawWeights.push_back(move(gpoolMaskShiftRawWeights));
++      model->namedWeights[gpoolMaskShiftLayerName] = gpoolMaskShiftNamedWeights;
+       gpoolMaskAddLayer = network->addElementWise(
+         *inputLayer->getOutput(0), *gpoolMaskShiftLayer->getOutput(0), ElementWiseOperation::kSUM);
+       auto gpoolMaskAddLayerName = name + "/gpmaskadd";
+@@ -978,6 +1018,11 @@ struct ComputeHandle {
+     }
+     config->setFlag(BuilderFlag::kPREFER_PRECISION_CONSTRAINTS);
+ 
++#ifdef CACHE_TENSORRT_PLAN
++    config->setFlag(BuilderFlag::kSTRIP_PLAN);
++    config->setFlag(BuilderFlag::kREFIT_IDENTICAL);
++#endif
++
+     auto network = unique_ptr<INetworkDefinition>(
+       builder->createNetworkV2(1U << static_cast<int>(NetworkDefinitionCreationFlag::kEXPLICIT_BATCH)));
+     if(!network) {
+@@ -1175,6 +1220,22 @@ struct ComputeHandle {
+     if(!engine) {
+       throw StringError("TensorRT backend: failed to create cuda engine");
+     }
++
++#ifdef CACHE_TENSORRT_PLAN
++    {
++      auto refitter = unique_ptr<IRefitter>(createInferRefitter(*engine, trtLogger));
++      auto numWeights = refitter->getAllWeights(0, nullptr);
++      std::vector<const char*> weightsNames(numWeights);
++      refitter->getAllWeights(numWeights, weightsNames.data());
++      for(int32_t i = 0; i < numWeights; i++) {
++        refitter->setNamedWeights(weightsNames[i], model->namedWeights[weightsNames[i]]);
++      }
++      if(!refitter->refitCudaEngineAsync(cudaStreamPerThread)) {
++        throw StringError("TensorRT backend: failed to refit cuda engine");
++      }
++    }
++#endif
++
+     exec.reset(engine->createExecutionContext());
+     if(!exec) {
+       throw StringError("TensorRT backend: failed to create execution context");
+-- 
+2.43.0
+
+
+From 2fd4a8b23355015c2e3a4a82d0b5b2733eac3f4c Mon Sep 17 00:00:00 2001
+From: Yule Hou <hyln9@live.cn>
+Date: Wed, 19 Jun 2024 19:30:48 +0800
+Subject: [PATCH 3/4] Fix trt version detection
+
+---
+ cpp/CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/cpp/CMakeLists.txt b/cpp/CMakeLists.txt
+index 6c2437b0..d7260a5f 100644
+--- a/cpp/CMakeLists.txt
++++ b/cpp/CMakeLists.txt
+@@ -300,7 +300,7 @@ elseif(USE_BACKEND STREQUAL "TENSORRT")
+     message(FATAL_ERROR "${ColorBoldRed} NvInfer.h was NOT found, specify TENSORRT_INCLUDE_DIR to indicate where it is. ${ColorReset}")
+   endif()
+   find_library(TENSORRT_LIBRARY nvinfer HINTS ${TENSORRT_ROOT_DIR} PATH_SUFFIXES lib)
+-  file(READ "${TENSORRT_INCLUDE_DIR}/NvInferVersion.h" tensorrt_version_header)
++  file(STRINGS "${TENSORRT_INCLUDE_DIR}/NvInferVersion.h" tensorrt_version_header NEWLINE_CONSUME)
+   string(REGEX MATCH "#define NV_TENSORRT_MAJOR ([0-9]+)" tensorrt_version_macro ${tensorrt_version_header})
+   set(TENSORRT_VERSION_MAJOR ${CMAKE_MATCH_1})
+   string(REGEX MATCH "#define NV_TENSORRT_MINOR ([0-9]+)" tensorrt_version_macro ${tensorrt_version_header})
+-- 
+2.43.0
+
+
+From 5a1ef44f3eb71ee279b106ea489e8da2e03eb0ab Mon Sep 17 00:00:00 2001
+From: Yule Hou <6761583+hyln9@users.noreply.github.com>
+Date: Mon, 29 Jul 2024 00:37:11 +0800
+Subject: [PATCH 4/4] Fix trt deprecation warning
+
+---
+ cpp/neuralnet/trtbackend.cpp | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/cpp/neuralnet/trtbackend.cpp b/cpp/neuralnet/trtbackend.cpp
+index 9be4efa4..cc64358a 100644
+--- a/cpp/neuralnet/trtbackend.cpp
++++ b/cpp/neuralnet/trtbackend.cpp
+@@ -1023,8 +1023,7 @@ struct ComputeHandle {
+     config->setFlag(BuilderFlag::kREFIT_IDENTICAL);
+ #endif
+ 
+-    auto network = unique_ptr<INetworkDefinition>(
+-      builder->createNetworkV2(1U << static_cast<int>(NetworkDefinitionCreationFlag::kEXPLICIT_BATCH)));
++    auto network = unique_ptr<INetworkDefinition>(builder->createNetworkV2(0));
+     if(!network) {
+       throw StringError("TensorRT backend: failed to create network definition");
+     }
+-- 
+2.43.0
+
