@@ -1,0 +1,168 @@
+name: auto build engine
+
+on: 
+  release:
+    types: [published]
+  schedule:
+    - cron: "0 16 * * *"
+  push:
+    branches: 
+      - master
+  watch:
+    types: [started]
+   
+jobs:
+  TENSORRT:
+    runs-on: windows-2025
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@main
+
+    - name: Install Dependencies
+      run: |
+        vcpkg install gperftools:x64-windows-static zlib:x64-windows-static libzip[core,default-aes]:x64-windows-static openssl:x64-windows-static
+
+    - name: Install Cuda Toolkit
+      shell: pwsh
+      env:
+        CUDA_VERSION: '13.1.1'
+      run: |
+        $pkgs = @("cuda_cccl", "cuda_crt", "cuda_cudart", "cuda_nvcc")
+        $arch = "windows-x86_64"
+        $cuda_path = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v" + ($env:CUDA_VERSION -replace '\.[^.]+$', '')
+        mkdir -p $cuda_path
+        choco install unzip -y
+        $cuda_url = "https://developer.download.nvidia.com/compute/cuda/redist"
+        curl -O "${cuda_url}/redistrib_${env:CUDA_VERSION}.json"
+        $json = Get-Content "redistrib_${env:CUDA_VERSION}.json" | ConvertFrom-Json
+        foreach ($pkg in $pkgs) {
+          $rel_path = $json.$pkg.$arch.relative_path
+          $url = "${cuda_url}/${rel_path}"
+          curl -O $url
+          $filename = Split-Path $url -Leaf
+          $prefix = $filename -replace '\.zip$', ''
+          unzip $filename -d $cuda_path
+          xcopy "${cuda_path}\${prefix}\*" $cuda_path /E /I /H /Y
+        }
+        echo "CUDA_PATH=$cuda_path" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+        #curl -O https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/10.13.3/zip/TensorRT-10.13.3.9.Windows.win10.cuda-13.0.zip
+        #unzip TensorRT-10.13.3.9.Windows.win10.cuda-13.0.zip -d $cuda_path
+    
+    - name: Build KataGo
+      shell: cmd
+      run: |
+        set "VCPKG_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
+        set "TENSORRT_INCLUDE_DIR=%cd%\CUDA\include"
+        set "TENSORRT_LIBRARY=%cd%\CUDA\lib\nvinfer_10.lib"
+        git clone https://github.com/lightvector/KataGo --depth 1
+        pushd KataGo\cpp\
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+        cmake -S . -B build -G "Visual Studio 17 2022" ^
+          -DCMAKE_TOOLCHAIN_FILE=%VCPKG_FILE% ^
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
+          -DUSE_TCMALLOC=ON ^
+          -DUSE_AVX2:BOOL=ON ^
+          -DBUILD_DISTRIBUTED:BOOL=ON ^
+          -DUSE_BACKEND:STRING=TENSORRT ^
+          -DTENSORRT_INCLUDE_DIR:PATH=%TENSORRT_INCLUDE_DIR% ^
+          -DTENSORRT_LIBRARY:FILEPATH=%TENSORRT_LIBRARY%
+        cmake --build build --config Release
+        popd
+    
+    - name: Upload KataGo
+      uses: actions/upload-artifact@main
+      with:
+        name: katago
+        path: KataGo\cpp\build\Release\katago.exe
+    
+  OPENCL:
+    runs-on: windows-2025
+    
+    steps:
+    - name: Install Dependencies
+      run: |
+        vcpkg install gperftools:x64-windows-static zlib:x64-windows-static libzip[core,default-aes]:x64-windows-static openssl:x64-windows-static
+    
+    - name: Install Cuda Toolkit
+      shell: pwsh
+      env:
+        CUDA_VERSION: '13.1.0'
+      run: |
+        $pkgs = @("cuda_opencl")
+        $arch = "windows-x86_64"
+        $cuda_path = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v" + ($env:CUDA_VERSION -replace '\.[^.]+$', '')
+        mkdir -p $cuda_path
+        choco install unzip -y
+        $cuda_url = "https://developer.download.nvidia.com/compute/cuda/redist"
+        curl -O "${cuda_url}/redistrib_${env:CUDA_VERSION}.json"
+        $json = Get-Content "redistrib_${env:CUDA_VERSION}.json" | ConvertFrom-Json
+        foreach ($pkg in $pkgs) {
+          $rel_path = $json.$pkg.$arch.relative_path
+          $url = "${cuda_url}/${rel_path}"
+          curl -O $url
+          $filename = Split-Path $url -Leaf
+          $prefix = $filename -replace '\.zip$', ''
+          unzip $filename -d $cuda_path
+          xcopy "${cuda_path}\${prefix}\*" $cuda_path /E /I /H /Y
+        }
+        echo "CUDA_PATH=$cuda_path" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+    
+    - name: Build KataGo
+      shell: cmd
+      run: |
+        set "VCPKG_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
+        git clone https://github.com/lightvector/KataGo KataGo_opencl --depth 1
+        pushd KataGo_opencl\cpp\
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+        cmake -S . -B build -G "Visual Studio 17 2022" ^
+          -DCMAKE_TOOLCHAIN_FILE=%VCPKG_FILE% ^
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
+          -DUSE_TCMALLOC=ON ^
+          -DUSE_AVX2:BOOL=ON ^
+          -DBUILD_DISTRIBUTED:BOOL=ON ^
+          -DUSE_BACKEND:STRING=OPENCL
+        cmake --build build --config Release
+        mv build\Release\katago.exe build\Release\katago_opencl.exe
+        popd
+    
+    - name: Upload KataGo
+      uses: actions/upload-artifact@main
+      with:
+        name: katago_opencl
+        path: KataGo_opencl\cpp\build\Release\katago_opencl.exe
+
+  push:
+    needs: [TENSORRT, OPENCL]
+    runs-on: windows-2025
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@main
+    
+    - name: Clean
+      run: |
+        rm katago*
+    
+    - name: Download KataGo TENSORRT
+      uses: actions/download-artifact@main
+      with:
+        name: katago
+        path: ./
+        
+    - name: Download KataGo OPENCL
+      uses: actions/download-artifact@main
+      with:
+        name: katago_opencl
+        path: ./
+    
+    - name: Commit
+      run: |
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Actions"
+        git checkout --orphan new_branch
+        git add -A
+        git commit -am "update new file"
+        git branch -D master
+        git branch -m master
+        git push origin master --force
