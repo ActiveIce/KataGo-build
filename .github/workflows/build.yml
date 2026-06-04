@@ -66,8 +66,7 @@ jobs:
           -DUSE_AVX2:BOOL=ON ^
           -DBUILD_DISTRIBUTED:BOOL=ON ^
           -DUSE_BACKEND:STRING=TENSORRT ^
-          -DTENSORRT_INCLUDE_DIR:PATH=%TENSORRT_INCLUDE_DIR% ^
-          -DTENSORRT_LIBRARY:FILEPATH=%TENSORRT_LIBRARY%
+          -DTENSORRT_ROOT_DIR:PATH=%TENSORRT_ROOT_DIR% ^
         cmake --build build --config Release
         popd
     
