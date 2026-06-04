@@ -54,8 +54,7 @@ jobs:
       shell: cmd
       run: |
         set "VCPKG_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
-        set "TENSORRT_INCLUDE_DIR=%cd%\CUDA\include"
-        set "TENSORRT_LIBRARY=%cd%\CUDA\lib\nvinfer_11.lib"
+        set "TENSORRT_ROOT_DIR=%cd%\CUDA"
         git clone https://github.com/lightvector/KataGo --depth 1
         #git clone https://github.com/ActiveIce/KataGo --depth 1
         pushd KataGo\cpp\
