@@ -56,8 +56,8 @@ jobs:
         set "VCPKG_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
         set "TENSORRT_INCLUDE_DIR=%cd%\CUDA\include"
         set "TENSORRT_LIBRARY=%cd%\CUDA\lib\nvinfer_11.lib"
-        #git clone https://github.com/lightvector/KataGo --depth 1
-        git clone https://github.com/ActiveIce/KataGo --depth 1
+        git clone https://github.com/lightvector/KataGo --depth 1
+        #git clone https://github.com/ActiveIce/KataGo --depth 1
         pushd KataGo\cpp\
         call "C:\Program Files\Microsoft Visual Studio\2026\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
         cmake -S . -B build -G "Visual Studio 18 2026" ^
