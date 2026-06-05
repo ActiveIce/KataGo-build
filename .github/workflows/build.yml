@@ -63,10 +63,10 @@ jobs:
           -DCMAKE_TOOLCHAIN_FILE=%VCPKG_FILE% ^
           -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
           -DUSE_TCMALLOC=ON ^
-          -DUSE_AVX2:BOOL=ON ^
-          -DBUILD_DISTRIBUTED:BOOL=ON ^
-          -DUSE_BACKEND:STRING=TENSORRT ^
-          -DTENSORRT_ROOT_DIR:PATH=%TENSORRT_ROOT_DIR%
+          -DUSE_AVX2=ON ^
+          -DBUILD_DISTRIBUTED=ON ^
+          -DUSE_BACKEND=TENSORRT ^
+          -DTENSORRT_ROOT_DIR=%TENSORRT_ROOT_DIR%
         cmake --build build --config Release
         popd
     
@@ -117,9 +117,9 @@ jobs:
           -DCMAKE_TOOLCHAIN_FILE=%VCPKG_FILE% ^
           -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
           -DUSE_TCMALLOC=ON ^
-          -DUSE_AVX2:BOOL=ON ^
-          -DBUILD_DISTRIBUTED:BOOL=ON ^
-          -DUSE_BACKEND:STRING=OPENCL
+          -DUSE_AVX2=ON ^
+          -DBUILD_DISTRIBUTED=ON ^
+          -DUSE_BACKEND=OPENCL
         cmake --build build --config Release
         mv build\Release\katago.exe build\Release\katago_opencl.exe
         popd
