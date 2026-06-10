@@ -24,7 +24,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        vcpkg install --triplet=x64-windows-static-md gperftools zlib libzip[core,default-aes] openssl protobuf absl
+        vcpkg install --triplet=x64-windows-static-md gperftools zlib libzip[core,default-aes] openssl protobuf
 
     - name: Install Cuda Toolkit
       shell: pwsh
