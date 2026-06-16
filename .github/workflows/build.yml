@@ -59,7 +59,7 @@ jobs:
         git clone https://github.com/ActiveIce/KataGo --depth 1
         pushd KataGo\cpp\
         call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
-        cmake -S . -B build -G "Visual Studio 18 2026" ^
+        cmake -S . -B build -A x64 ^
           -DCMAKE_TOOLCHAIN_FILE=%VCPKG_FILE% ^
           -DVCPKG_TARGET_TRIPLET=x64-windows-static-md ^
           -DUSE_TCMALLOC=ON ^
@@ -113,7 +113,7 @@ jobs:
         git clone https://github.com/lightvector/KataGo KataGo_opencl --depth 1
         pushd KataGo_opencl\cpp\
         call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
-        cmake -S . -B build -G "Visual Studio 18 2026" ^
+        cmake -S . -B build -A x64 ^
           -DCMAKE_TOOLCHAIN_FILE=%VCPKG_FILE% ^
           -DVCPKG_TARGET_TRIPLET=x64-windows-static-md ^
           -DUSE_TCMALLOC=ON ^
