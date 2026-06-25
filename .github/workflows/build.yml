@@ -25,7 +25,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        vcpkg install --triplet=x64-windows-static-md gperftools zlib libzip[core,default-aes] openssl protobuf
+        vcpkg install --triplet=x64-windows-static-mt gperftools zlib libzip[core,default-aes] openssl protobuf
 
     - name: Install Cuda Toolkit
       shell: pwsh
@@ -63,7 +63,7 @@ jobs:
         call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
         cmake -S . -B build -A x64 ^
           -DCMAKE_TOOLCHAIN_FILE=%VCPKG_FILE% ^
-          -DVCPKG_TARGET_TRIPLET=x64-windows-static-md ^
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static-mt ^
           -DUSE_TCMALLOC=ON ^
           -DUSE_AVX2=ON ^
           -DBUILD_DISTRIBUTED=ON ^
