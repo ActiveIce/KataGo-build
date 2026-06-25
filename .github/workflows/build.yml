@@ -13,7 +13,8 @@ on:
 
 env:
   CUDA_VERSION: '13.3.0'
-   
+  GH_TOKEN: ${{ github.token }}
+
 jobs:
   TENSORRT:
     runs-on: windows-2025-vs2026
@@ -29,7 +30,7 @@ jobs:
     - name: Install Cuda Toolkit
       shell: pwsh
       run: |
-        $pkgs = @("cuda_crt", "cuda_cudart", "cuda_nvcc")
+        $pkgs = @("cccl", "cuda_crt", "cuda_cudart", "cuda_nvcc")
         $arch = "windows-x86_64"
         $cuda_path = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v" + ($env:CUDA_VERSION -replace '\.[^.]+$', '')
         mkdir -p $cuda_path
