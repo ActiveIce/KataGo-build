@@ -24,7 +24,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        vcpkg install --triplet=x64-windows-static-md gperftools zlib libzip[core,default-aes] openssl
+        vcpkg install --triplet=x64-windows-static gperftools zlib libzip[core,default-aes] openssl
 
     - name: Install Cuda Toolkit
       shell: pwsh
@@ -83,7 +83,7 @@ jobs:
     steps:
     - name: Install Dependencies
       run: |
-        vcpkg install gperftools:x64-windows-static-md zlib:x64-windows-static libzip[core,default-aes]:x64-windows-static openssl:x64-windows-static
+        vcpkg install gperftools:x64-windows-static zlib:x64-windows-static libzip[core,default-aes]:x64-windows-static openssl:x64-windows-static
     
     - name: Install Cuda Toolkit
       shell: pwsh
