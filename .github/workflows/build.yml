@@ -24,7 +24,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        vcpkg install --triplet=x64-windows-static-md gperftools zlib libzip[core,default-aes] openssl protobuf
+        vcpkg install --triplet=x64-windows-static-md gperftools zlib libzip[core,default-aes] openssl
 
     - name: Install Cuda Toolkit
       shell: pwsh
@@ -58,6 +58,7 @@ jobs:
         #git clone https://github.com/lightvector/KataGo --depth 1
         git clone https://github.com/ActiveIce/KataGo --depth 1
         pushd KataGo\cpp\
+        gh pr checkout 1206
         call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
         cmake -S . -B build -A x64 ^
           -DCMAKE_TOOLCHAIN_FILE=%VCPKG_FILE% ^
