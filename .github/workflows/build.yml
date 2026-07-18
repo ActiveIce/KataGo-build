@@ -73,6 +73,7 @@ jobs:
         git config --global user.name "GitHub Actions"
         git merge master
         cd ..
+        powershell -Command "(Get-Content KataGo\cpp\CMakeLists.txt) -replace '\$\{Protobuf_LIBRARIES\}', 'protobuf::libprotobuf' | Set-Content KataGo\cpp\CMakeLists.txt"
         pushd KataGo\cpp\
         call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
         cmake -S . -B build -A x64 ^
