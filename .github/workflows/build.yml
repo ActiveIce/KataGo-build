@@ -78,7 +78,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release ^
           -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
           -DCMAKE_POLICY_DEFAULT_CMP0091=NEW ^
-          "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>" ^
+          -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
           -DUSE_TCMALLOC=ON ^
           -DUSE_AVX2=ON ^
           -DBUILD_DISTRIBUTED=ON ^
@@ -135,7 +135,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release ^
           -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
           -DCMAKE_POLICY_DEFAULT_CMP0091=NEW ^
-          "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>" ^
+          -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
           -DUSE_TCMALLOC=ON ^
           -DUSE_AVX2=ON ^
           -DBUILD_DISTRIBUTED=ON ^
