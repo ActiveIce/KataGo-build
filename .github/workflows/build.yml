@@ -78,7 +78,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release ^
           -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
           -DCMAKE_POLICY_DEFAULT_CMP0091=NEW ^
-          -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug> ^
+          "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>" ^
           -DUSE_TCMALLOC=ON ^
           -DUSE_AVX2=ON ^
           -DBUILD_DISTRIBUTED=ON ^
@@ -99,7 +99,7 @@ jobs:
     steps:
     - name: Install Dependencies
       run: |
-        vcpkg install --triplet=x64-windows-static gperftools zlib libzip[core,default-aes] openssl --cmake-args=-DVCPKG_BUILD_TYPE=release
+        vcpkg install --triplet=x64-windows-static-md gperftools zlib libzip[core,default-aes] openssl --cmake-args=-DVCPKG_BUILD_TYPE=release
     
     - name: Install Cuda Toolkit
       shell: pwsh
@@ -133,9 +133,8 @@ jobs:
         cmake -S . -B build -A x64 ^
           -DCMAKE_TOOLCHAIN_FILE=%VCPKG_FILE% ^
           -DCMAKE_BUILD_TYPE=Release ^
-          -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static-md ^
           -DCMAKE_POLICY_DEFAULT_CMP0091=NEW ^
-          -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug> ^
           -DUSE_TCMALLOC=ON ^
           -DUSE_AVX2=ON ^
           -DBUILD_DISTRIBUTED=ON ^
