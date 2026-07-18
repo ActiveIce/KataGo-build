@@ -67,9 +67,11 @@ jobs:
         set "VCPKG_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
         set "TENSORRT_ROOT_DIR=%cd%\CUDA"
         git clone https://github.com/lightvector/KataGo --depth 1
+        cd KataGo
+        gh pr merge 1206 --squash
+        cd ..
         pushd KataGo\cpp\
-        gh pr checkout 1206
-        powershell -Command "(Get-Content CMakeLists.txt) -replace [regex]::Escape('${Protobuf_LIBRARIES}'), 'protobuf::libprotobuf' | Set-Content CMakeLists.txt"
+        #powershell -Command "(Get-Content CMakeLists.txt) -replace [regex]::Escape('${Protobuf_LIBRARIES}'), 'protobuf::libprotobuf' | Set-Content CMakeLists.txt"
         call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
         cmake -S . -B build -A x64 ^
           -DCMAKE_TOOLCHAIN_FILE=%VCPKG_FILE% ^
