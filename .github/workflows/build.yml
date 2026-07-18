@@ -68,6 +68,7 @@ jobs:
         set "TENSORRT_ROOT_DIR=%cd%\CUDA"
         git clone https://github.com/lightvector/KataGo --depth 1
         cd KataGo
+        git checkout -b test-pr-branch
         gh pr merge 1206 --squash
         cd ..
         pushd KataGo\cpp\
