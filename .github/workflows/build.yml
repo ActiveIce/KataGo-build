@@ -64,6 +64,7 @@ jobs:
         $json = Get-Content "redistrib_${env:CUDNN_VERSION}.json" | ConvertFrom-Json
         $rel_path = $json."cudnn".$arch."cuda13".relative_path
         $url = "${cudnn_url}/${rel_path}"
+        curl -O $url
         $filename = Split-Path $url -Leaf
         $prefix = $filename -replace '\.zip$', ''
         unzip $filename -d $cuda_path
