@@ -62,7 +62,7 @@ jobs:
         $cudnn_url = "https://developer.download.nvidia.com/compute/cudnn/redist"
         curl -O "${cudnn_url}/redistrib_${env:CUDNN_VERSION}.json"
         $json = Get-Content "redistrib_${env:CUDNN_VERSION}.json" | ConvertFrom-Json
-        $rel_path = $json.${"cudnn"}.$arch.${"cuda13"}.relative_path
+        $rel_path = $json."cudnn".$arch."cuda13".relative_path
         $url = "${cudnn_url}/${rel_path}"
         $filename = Split-Path $url -Leaf
         $prefix = $filename -replace '\.zip$', ''
