@@ -93,7 +93,8 @@ jobs:
           -DUSE_TCMALLOC=ON ^
           -DUSE_AVX2=ON ^
           -DBUILD_DISTRIBUTED=ON ^
-          -DUSE_BACKEND=CUDA
+          -DUSE_BACKEND=CUDA ^
+          -DCUDAToolkit_ROOT=%CUDA_PATH%
           ::-DUSE_BACKEND=TENSORRT ^
           ::-DTENSORRT_ROOT_DIR=%TENSORRT_ROOT_DIR%
         cmake --build build --config Release
