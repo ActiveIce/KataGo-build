@@ -13,6 +13,7 @@ on:
 
 env:
   CUDA_VERSION: '13.3.1'
+  CUDNN_VERSION: '9.25.0'
   GH_TOKEN: ${{ github.token }}
 
 jobs:
@@ -57,6 +58,17 @@ jobs:
           unzip $filename -d $cuda_path
           xcopy "${cuda_path}\${prefix}\*" $cuda_path /E /I /H /Y
         }
+        
+        $cudnn_url = "https://developer.download.nvidia.com/compute/cudnn/redist"
+        curl -O "${cudnn_url}/redistrib_${env:CUDNN_VERSION}.json"
+        $json = Get-Content "redistrib_${env:CUDNN_VERSION}.json" | ConvertFrom-Json
+        $rel_path = $json.${"cudnn"}.$arch.${"cuda13"}.relative_path
+        $url = "${cudnn_url}/${rel_path}"
+        $filename = Split-Path $url -Leaf
+        $prefix = $filename -replace '\.zip$', ''
+        unzip $filename -d $cuda_path
+        xcopy "${cuda_path}\${prefix}\*" $cuda_path /E /I /H /Y
+
         echo "CUDA_PATH=$cuda_path" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
         #curl -O https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/10.13.3/zip/TensorRT-10.13.3.9.Windows.win10.cuda-13.0.zip
         #unzip TensorRT-10.13.3.9.Windows.win10.cuda-13.0.zip -d $cuda_path
@@ -80,8 +92,9 @@ jobs:
           -DUSE_TCMALLOC=ON ^
           -DUSE_AVX2=ON ^
           -DBUILD_DISTRIBUTED=ON ^
-          -DUSE_BACKEND=TENSORRT ^
-          -DTENSORRT_ROOT_DIR=%TENSORRT_ROOT_DIR%
+          -DUSE_BACKEND=CUDA
+          #-DUSE_BACKEND=TENSORRT ^
+          #-DTENSORRT_ROOT_DIR=%TENSORRT_ROOT_DIR%
         cmake --build build --config Release
         popd
     
