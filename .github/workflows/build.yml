@@ -85,8 +85,10 @@ jobs:
         ::cd ..
         pushd KataGo\cpp\
         call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
-        cmake -S . -B build -A x64 ^
+        cmake -S . -B build -G "Ninja Multi-Config" ^
           -DCMAKE_TOOLCHAIN_FILE=%VCPKG_FILE% ^
+          -DCUDAToolkit_ROOT=%CUDA_PATH% ^
+          -DCMAKE_CUDA_COMPILER=%CUDA_PATH%\bin\nvcc.exe ^
           -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
           -DCMAKE_BUILD_TYPE=Release ^
           -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
