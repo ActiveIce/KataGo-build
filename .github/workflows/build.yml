@@ -79,9 +79,9 @@ jobs:
         set "VCPKG_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
         set "TENSORRT_ROOT_DIR=%cd%\CUDA"
         git clone https://github.com/lightvector/KataGo
-        cd KataGo
-        git apply ../trt11.patch --reject
-        cd ..
+        ::cd KataGo
+        ::git apply ../trt11.patch --reject
+        ::cd ..
         pushd KataGo\cpp\
         call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
         cmake -S . -B build -A x64 ^
@@ -93,8 +93,8 @@ jobs:
           -DUSE_AVX2=ON ^
           -DBUILD_DISTRIBUTED=ON ^
           -DUSE_BACKEND=CUDA
-          #-DUSE_BACKEND=TENSORRT ^
-          #-DTENSORRT_ROOT_DIR=%TENSORRT_ROOT_DIR%
+          ::-DUSE_BACKEND=TENSORRT ^
+          ::-DTENSORRT_ROOT_DIR=%TENSORRT_ROOT_DIR%
         cmake --build build --config Release
         popd
     
