@@ -41,7 +41,7 @@ jobs:
     - name: Install Cuda Toolkit
       shell: pwsh
       run: |
-        $pkgs = @("cccl", "cuda_crt", "cuda_cudart", "cuda_nvcc")
+        $pkgs = @("cccl", "cuda_crt", "cuda_cudart", "cuda_nvcc", "libcublas")
         $arch = "windows-x86_64"
         $cuda_path = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v" + ($env:CUDA_VERSION -replace '\.[^.]+$', '')
         mkdir -p $cuda_path
