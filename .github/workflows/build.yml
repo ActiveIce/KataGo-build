@@ -71,6 +71,25 @@ jobs:
         xcopy "${cuda_path}\${prefix}\*" $cuda_path /E /I /H /Y
 
         echo "CUDA_PATH=$cuda_path" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+        $cuda_version_short = $env:CUDA_VERSION -replace '\.[^.]+$', ''
+        $cuda_env_var = "CUDA_PATH_V" + ($cuda_version_short -replace '\.', '_')
+        echo "${cuda_env_var}=${cuda_path}" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+        # Register CUDA Visual Studio integration so CMake can find the CUDA toolset
+        $vs_integration_src = Join-Path $cuda_path "extras\visual_studio_integration\MSBuildExtensions"
+        if (Test-Path $vs_integration_src) {
+          $vs_base = "C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Microsoft\VC"
+          $vc_dirs = @(Get-ChildItem $vs_base -Directory -ErrorAction SilentlyContinue)
+          if ($vc_dirs.Count -eq 0) {
+            $vc_dirs = @([PSCustomObject]@{ FullName = "$vs_base\v170" }, [PSCustomObject]@{ FullName = "$vs_base\v180" })
+          }
+          foreach ($vc_dir in $vc_dirs) {
+            $dest = Join-Path $vc_dir.FullName "BuildCustomizations"
+            if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Force -Path $dest | Out-Null }
+            Copy-Item "$vs_integration_src\*" $dest -Force
+          }
+        }
+
         #curl -O https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/10.13.3/zip/TensorRT-10.13.3.9.Windows.win10.cuda-13.0.zip
         #unzip TensorRT-10.13.3.9.Windows.win10.cuda-13.0.zip -d $cuda_path
     
