@@ -70,24 +70,6 @@ jobs:
         unzip $filename -d $cuda_path
         xcopy "${cuda_path}\${prefix}\*" $cuda_path /E /I /H /Y
 
-        # The Visual Studio CMake generator needs the CUDA MSBuild integration
-        # (props/targets/xml) inside the Visual Studio BuildCustomizations folder,
-        # otherwise configuring fails with "No CUDA toolset found".
-        $msbuild_ext = Join-Path $cuda_path "visual_studio_integration\MSBuildExtensions"
-        if (-not (Test-Path $msbuild_ext)) {
-          throw "CUDA Visual Studio integration files not found at $msbuild_ext"
-        }
-        $vc_msbuild_dir = "C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Microsoft\VC"
-        $build_customizations = Get-ChildItem -Path $vc_msbuild_dir -Directory |
-          ForEach-Object { Join-Path $_.FullName "BuildCustomizations" } |
-          Where-Object { Test-Path $_ }
-        if (-not $build_customizations) {
-          throw "No Visual Studio BuildCustomizations directory found under $vc_msbuild_dir"
-        }
-        foreach ($dir in $build_customizations) {
-          Copy-Item "${msbuild_ext}\*" $dir -Recurse -Force
-        }
-
         echo "CUDA_PATH=$cuda_path" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
         #curl -O https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/10.13.3/zip/TensorRT-10.13.3.9.Windows.win10.cuda-13.0.zip
         #unzip TensorRT-10.13.3.9.Windows.win10.cuda-13.0.zip -d $cuda_path
@@ -112,6 +94,8 @@ jobs:
           -DUSE_AVX2=ON ^
           -DBUILD_DISTRIBUTED=ON ^
           -DUSE_BACKEND=CUDA
+          -DCUDAToolkit_ROOT=%CUDA_PATH% ^
+          -DCMAKE_CUDA_COMPILER=%CUDA_PATH%\bin\nvcc.exe
           ::-DUSE_BACKEND=TENSORRT ^
           ::-DTENSORRT_ROOT_DIR=%TENSORRT_ROOT_DIR%
         cmake --build build --config Release
