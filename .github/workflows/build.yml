@@ -93,7 +93,7 @@ jobs:
           -DUSE_TCMALLOC=ON ^
           -DUSE_AVX2=ON ^
           -DBUILD_DISTRIBUTED=ON ^
-          -DUSE_BACKEND=CUDA
+          -DUSE_BACKEND=CUDA ^
           -DCUDAToolkit_ROOT=%CUDA_PATH% ^
           -DCMAKE_CUDA_COMPILER=%CUDA_PATH%\bin\nvcc.exe
           ::-DUSE_BACKEND=TENSORRT ^
