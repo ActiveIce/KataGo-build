@@ -80,8 +80,8 @@ jobs:
       run: |
         set "VCPKG_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
         ::set "TENSORRT_ROOT_DIR=%cd%\CUDA"
-        set "CUDAToolkit_ROOT"=%CUDA_PATH%
-        set "CMAKE_CUDA_COMPILER"=%CUDA_PATH%\bin\nvcc.exe
+        set "CUDAToolkit_ROOT=%CUDA_PATH%"
+        set "CMAKE_CUDA_COMPILER=%CUDA_PATH%\bin\nvcc.exe"
         git clone https://github.com/lightvector/KataGo
         ::cd KataGo
         ::git apply ../trt11.patch --reject
