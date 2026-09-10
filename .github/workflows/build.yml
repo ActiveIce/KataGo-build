@@ -12,12 +12,12 @@ on:
     types: [started]
 
 env:
-  CUDA_VERSION: '13.3.1'
-  CUDNN_VERSION: '9.25.0'
+  CUDA_VERSION: '13.4.1'
+  CUDNN_VERSION: '9.26.0'
   GH_TOKEN: ${{ github.token }}
 
 jobs:
-  TENSORRT:
+  CUDA:
     runs-on: windows-2025-vs2026
     
     steps:
@@ -167,7 +167,7 @@ jobs:
         path: KataGo_opencl\cpp\build\Release\katago_opencl.exe
 
   push:
-    needs: [TENSORRT, OPENCL]
+    needs: [CUDA, OPENCL]
     runs-on: windows-2025-vs2026
     
     steps:
@@ -178,7 +178,7 @@ jobs:
       run: |
         rm katago*
     
-    - name: Download KataGo TENSORRT
+    - name: Download KataGo CUDA
       uses: actions/download-artifact@main
       with:
         name: katago
