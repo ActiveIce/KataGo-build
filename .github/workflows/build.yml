@@ -59,7 +59,15 @@ jobs:
           unzip $filename -d $cuda_path
           xcopy "${cuda_path}\${prefix}\*" $cuda_path /E /I /H /Y
         }
-        
+
+        # CMake's Visual Studio generator looks for the CUDA MSBuild integration in
+        # <toolkit>\extras\visual_studio_integration\MSBuildExtensions, but the redist
+        # package extracts it to <toolkit>\visual_studio_integration.
+        $vsi_src = Join-Path $cuda_path "visual_studio_integration"
+        $vsi_dst = Join-Path $cuda_path "extras"
+        mkdir -p $vsi_dst
+        xcopy "${vsi_src}" "${vsi_dst}\visual_studio_integration" /E /I /H /Y
+
         $cudnn_url = "https://developer.download.nvidia.com/compute/cudnn/redist"
         curl -O "${cudnn_url}/redistrib_${env:CUDNN_VERSION}.json"
         $json = Get-Content "redistrib_${env:CUDNN_VERSION}.json" | ConvertFrom-Json
@@ -88,7 +96,7 @@ jobs:
         ::cd ..
         pushd KataGo\cpp\
         call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
-        cmake -S . -B build -A x64 ^
+        cmake -S . -B build -A x64 -T cuda="%CUDA_PATH%" ^
           -DCMAKE_TOOLCHAIN_FILE=%VCPKG_FILE% ^
           -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
           -DCMAKE_BUILD_TYPE=Release ^
@@ -97,8 +105,8 @@ jobs:
           -DUSE_AVX2=ON ^
           -DBUILD_DISTRIBUTED=ON ^
           -DUSE_BACKEND=CUDA ^
-          -DCUDAToolkit_ROOT=%CUDAToolkit_ROOT% ^
-          -DCMAKE_CUDA_COMPILER=%CMAKE_CUDA_COMPILER%
+          -DCUDAToolkit_ROOT="%CUDAToolkit_ROOT%" ^
+          -DCMAKE_CUDA_COMPILER="%CMAKE_CUDA_COMPILER%"
           ::-DUSE_BACKEND=TENSORRT ^
           ::-DTENSORRT_ROOT_DIR=%TENSORRT_ROOT_DIR%
         cmake --build build --config Release
