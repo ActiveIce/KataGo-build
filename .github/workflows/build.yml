@@ -36,7 +36,8 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        vcpkg install gperftools zlib libzip[core,default-aes] openssl protobuf --triplet=x64-windows-static --cmake-args=-DVCPKG_BUILD_TYPE=release
+        #vcpkg install gperftools zlib libzip[core,default-aes] openssl protobuf --triplet=x64-windows-static --cmake-args=-DVCPKG_BUILD_TYPE=release
+        vcpkg install gperftools zlib libzip[core,default-aes] openssl --triplet=x64-windows-static --cmake-args=-DVCPKG_BUILD_TYPE=release
 
     - name: Install Cuda Toolkit
       shell: pwsh
