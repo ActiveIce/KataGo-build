@@ -109,7 +109,7 @@ jobs:
     steps:
     - name: Install Dependencies
       run: |
-        vcpkg install gperftools zlib libzip[core,default-aes] openssl onnxruntime[openvino] openvino[core,cpu,gpu,npu,onnx] --triplet=x64-windows-static --cmake-args=-DVCPKG_BUILD_TYPE=release
+        vcpkg install gperftools zlib libzip[core,default-aes] openssl onnxruntime[openvino] openvino[core,cpu,gpu,npu,onnx] --triplet=x64-windows-static --cmake-args=-DVCPKG_BUILD_TYPE=release --allow-unsupported
     
     - name: Build KataGo
       shell: cmd
