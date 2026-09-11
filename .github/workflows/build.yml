@@ -103,42 +103,20 @@ jobs:
         name: katago
         path: KataGo\cpp\build\Release\katago.exe
     
-  OPENCL:
+  OPENVINO:
     runs-on: windows-2025-vs2026
     
     steps:
     - name: Install Dependencies
       run: |
-        vcpkg install gperftools zlib libzip[core,default-aes] openssl --triplet=x64-windows-static --cmake-args=-DVCPKG_BUILD_TYPE=release
-    
-    - name: Install Cuda Toolkit
-      shell: pwsh
-      run: |
-        $pkgs = @("cuda_opencl")
-        $arch = "windows-x86_64"
-        $cuda_path = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v" + ($env:CUDA_VERSION -replace '\.[^.]+$', '')
-        mkdir -p $cuda_path
-        choco install unzip -y
-        $cuda_url = "https://developer.download.nvidia.com/compute/cuda/redist"
-        curl -O "${cuda_url}/redistrib_${env:CUDA_VERSION}.json"
-        $json = Get-Content "redistrib_${env:CUDA_VERSION}.json" | ConvertFrom-Json
-        foreach ($pkg in $pkgs) {
-          $rel_path = $json.$pkg.$arch.relative_path
-          $url = "${cuda_url}/${rel_path}"
-          curl -O $url
-          $filename = Split-Path $url -Leaf
-          $prefix = $filename -replace '\.zip$', ''
-          unzip $filename -d $cuda_path
-          xcopy "${cuda_path}\${prefix}\*" $cuda_path /E /I /H /Y
-        }
-        echo "CUDA_PATH=$cuda_path" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+        vcpkg install gperftools zlib libzip[core,default-aes] openssl onnxruntime openvino --triplet=x64-windows-static --cmake-args=-DVCPKG_BUILD_TYPE=release
     
     - name: Build KataGo
       shell: cmd
       run: |
         set "VCPKG_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
-        git clone https://github.com/lightvector/KataGo KataGo_opencl --depth 1
-        pushd KataGo_opencl\cpp\
+        git clone https://github.com/lightvector/KataGo KataGo_openvino --depth 1
+        pushd KataGo_openvino\cpp\
         call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
         cmake -S . -B build -A x64 ^
           -DCMAKE_TOOLCHAIN_FILE=%VCPKG_FILE% ^
@@ -148,19 +126,19 @@ jobs:
           -DUSE_TCMALLOC=ON ^
           -DUSE_AVX2=ON ^
           -DBUILD_DISTRIBUTED=ON ^
-          -DUSE_BACKEND=OPENCL
+          -DUSE_BACKEND=ONNX
         cmake --build build --config Release
-        mv build\Release\katago.exe build\Release\katago_opencl.exe
+        mv build\Release\katago.exe build\Release\katago_openvino.exe
         popd
     
     - name: Upload KataGo
       uses: actions/upload-artifact@main
       with:
-        name: katago_opencl
-        path: KataGo_opencl\cpp\build\Release\katago_opencl.exe
+        name: KataGo_openvino
+        path: KataGo_openvino\cpp\build\Release\KataGo_openvino.exe
 
   push:
-    needs: [CUDA, OPENCL]
+    needs: [CUDA, OPENVINO]
     runs-on: windows-2025-vs2026
     
     steps:
@@ -177,10 +155,10 @@ jobs:
         name: katago
         path: ./
         
-    - name: Download KataGo OPENCL
+    - name: Download KataGo OPENVINO
       uses: actions/download-artifact@main
       with:
-        name: katago_opencl
+        name: katago_openvino
         path: ./
     
     - name: Commit
